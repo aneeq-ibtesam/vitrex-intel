@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block header %}Threat Intelligence Dashboard{% endblock %}
+
+{% block content %}
+<div class="card-container">
+    <a href="{{ url_for('web.ioc_list') }}" class="card" style="text-decoration: none; display: block;">
+        <h3>Total Indicators</h3>
+        <div class="number">{{ stats.total_iocs }}</div>
+    </a>
+    <a href="{{ url_for('web.ioc_list', source='limo') }}" class="card" style="text-decoration: none; display: block;">
+        <h3><i class="fas fa-fish"></i> LIMO Threats</h3>
+        <div class="number">{{ stats.limo_count }}</div>
+    </a>
+    <a href="{{ url_for('web.ioc_list', source='abusech') }}" class="card"
+        style="text-decoration: none; display: block;">
+        <h3><i class="fas fa-ban"></i> Abuse.ch</h3>
+        <div class="number">{{ stats.abuse_count }}</div>
+    </a>
+    <a href="{{ url_for('web.ioc_list', source='tor') }}" class="card" style="text-decoration: none; display: block;">
+        <h3><i class="fas fa-mask"></i> Dark Web Nodes</h3>
+        <div class="number">{{ stats.tor_count }}</div>
+    </a>
+</div>
+
+<h2>Latest Ingested Threats</h2>
+<table style="margin-top: 20px;">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Indicator</th>
+            <th>Source Label</th>
+            <th>Created</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ioc in latest_iocs %}
+        <tr onclick="window.location='{{ url_for('web.ioc_detail', ioc_id=ioc.id) }}'">
+            <td style="display: flex; align-items: center; gap: 10px;">
+                {% if 'ipv4-addr' in ioc.pattern %}
+                <i class="fas fa-network-wired" style="color: #10b981;"></i>
+                {% elif 'url' in ioc.pattern %}
+                <i class="fas fa-globe" style="color: #60a5fa;"></i>
+                {% elif 'file' in ioc.pattern %}
+                <i class="fas fa-file-code" style="color: #a78bfa;"></i>
+                {% else %}
+                <i class="fas fa-bug" style="color: #f43f5e;"></i>
+                {% endif %}
+                <span title="{{ ioc.pattern }}">{{ ioc.pattern | truncate(30) }}</span>
+            </td>
+            <td style="font-weight: 500;">{{ ioc.name }}</td>
+            <td>
+                {% if ioc.labels %}
+                <span class="tag">{{ ioc.labels[0] }}</span>
+                {% endif %}
+            </td>
+            <td style="font-size: 0.9em; color: var(--text-secondary);">{{ ioc.created[:10] }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">No threats ingested yet. Click Sync Data to start.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

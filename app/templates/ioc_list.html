@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Feed{% endblock %}
+{% block header %}
+Threat Feed
+{% if active_filter %}
+<span class="active-filter-badge">
+    FILTER: {{ active_filter|upper }}
+    <a href="{{ url_for('web.ioc_list') }}"><i class="fas fa-times" style="font-size: 0.8em;"></i></a>
+</span>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="filter-group">
+        <a href="{{ url_for('web.ioc_list', source=active_filter) }}"
+            class="btn-filter {% if not active_type %}active{% endif %}">All</a>
+        <a href="{{ url_for('web.ioc_list', source=active_filter, type='ip') }}"
+            class="btn-filter {% if active_type == 'ip' %}active{% endif %}">
+            <i class="fas fa-network-wired"></i> IPs
+        </a>
+        <a href="{{ url_for('web.ioc_list', source=active_filter, type='url') }}"
+            class="btn-filter {% if active_type == 'url' %}active{% endif %}">
+            <i class="fas fa-globe"></i> URLs
+        </a>
+        <a href="{{ url_for('web.ioc_list', source=active_filter, type='file') }}"
+            class="btn-filter {% if active_type == 'file' %}active{% endif %}">
+            <i class="fas fa-file-code"></i> Files
+        </a>
+    </div>
+
+    <input type="text" id="searchInput" placeholder="Search filtered results..."
+        style="padding: 10px; width: 300px; border: 1px solid #334155; border-radius: 8px; background: rgba(30, 41, 59, 0.5); color: #fff;">
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Indicator</th>
+            <th>Source</th>
+            <th>Confidence</th>
+            <th>Valid From</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="iocTableBody">
+        {% for ioc in iocs %}
+        <tr onclick="window.location='{{ url_for('web.ioc_detail', ioc_id=ioc.id) }}'">
+            <td>
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="margin-top: 2px;">
+                        {% if 'ipv4-addr' in ioc.pattern %}
+                        <i class="fas fa-network-wired fa-lg" style="color: #10b981;"></i>
+                        {% elif 'url' in ioc.pattern %}
+                        <i class="fas fa-globe fa-lg" style="color: #60a5fa;"></i>
+                        {% elif 'file' in ioc.pattern %}
+                        <i class="fas fa-file-code fa-lg" style="color: #a78bfa;"></i>
+                        {% else %}
+                        <i class="fas fa-bug fa-lg" style="color: #f43f5e;"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 4px; color: var(--text-primary);">{{ ioc.name }}
+                        </div>
+                        <div
+                            style="color: var(--text-secondary); font-size: 0.85em; font-family: 'Consolas', monospace;">
+                            {{ ioc.pattern }}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                {% for label in ioc.labels %}
+                <span class="tag">{{ label }}</span>
+                {% endfor %}
+            </td>
+            <td>
+                {% set conf = ioc.confidence | default(0) %}
+                <span
+                    style="color: {% if conf > 80 %}#ef4444{% elif conf > 50 %}#f59e0b{% else %}#10b981{% endif %}; font-weight: bold;">
+                    {{ conf }}%
+                </span>
+            </td>
+            <td style="font-size: 0.9em; color: var(--text-secondary);">{{ ioc.valid_from[:19] }}</td>
+            <td>
+                <a href="{{ url_for('web.ioc_detail', ioc_id=ioc.id) }}" class="btn"
+                    style="padding: 6px 12px; font-size: 0.8em; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); box-shadow: none;">
+                    Details
+                </a>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="fas fa-inbox fa-3x" style="margin-bottom: 15px; opacity: 0.5;"></i><br>
+                Please sync for indicators or remove filters
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    // Simple client-side search for demo
+    document.getElementById('searchInput').addEventListener('keyup', function () {
+        var value = this.value.toLowerCase();
+        var rows = document.querySelectorAll('#iocTableBody tr');
+        rows.forEach(function (row) {
+            var text = row.textContent.toLowerCase();
+            row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

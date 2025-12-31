@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitrex Intel - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="sidebar">
+        <h2><i class="fas fa-shield-virus"></i> Vitrex Intel <span
+                style="font-size:0.5em; opacity:0.6; margin-top:5px; margin-left:5px;">v0.1</span></h2>
+        <a href="{{ url_for('web.index') }}" class="{% if request.endpoint == 'web.index' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+        <a href="{{ url_for('web.ioc_list') }}" class="{% if request.endpoint == 'web.ioc_list' %}active{% endif %}">
+            <i class="fas fa-stream"></i> Threat Feed
+        </a>
+        <a href="#" onclick="triggerIngestion()">
+            <i class="fas fa-sync-alt"></i> Sync Intelligence
+        </a>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1>{% block header %}{% endblock %}</h1>
+            <div id="status-msg"></div>
+        </header>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="loading-overlay" id="syncOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Syncing Threat Intelligence...</div>
+        <div style="font-size: 0.9em; color: var(--text-secondary); margin-top: 10px;">Ingesting data from LIMO,
+            Abuse.ch, and Tor</div>
+    </div>
+
+    <script>
+        function triggerIngestion() {
+            const overlay = document.getElementById('syncOverlay');
+            overlay.classList.add('active');
+
+            // Minimum display time for the UX (so it doesn't flash too fast)
+            const minTime = new Promise(resolve => setTimeout(resolve, 2000));
+
+            const fetchReq = fetch("{{ url_for('api.trigger_ingest') }}")
+                .then(response => response.json());
+
+            Promise.all([fetchReq, minTime])
+                .then(([data]) => {
+                    // Success
+                    const text = document.querySelector('.loading-text');
+                    const subtext = text.nextElementSibling;
+
+                    text.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i> Sync Complete';
+
+                    const newCount = data.stats.new;
+                    const updatedCount = data.stats.updated;
+
+                    let msg = "";
+                    if (newCount > 0) msg += `<span style="color:#10b981">Found ${newCount} new</span> `;
+                    if (updatedCount > 0) msg += (msg ? "& " : "") + `<span style="color:#f59e0b">Updated ${updatedCount} existing</span> `;
+
+                    if (!msg) msg = "All indicators are up to date.";
+                    else msg += "indicators.";
+
+                    subtext.innerHTML = msg;
+                    subtext.style.fontWeight = 'bold';
+                    subtext.style.color = '#e2e8f0';
+
+                    // Wait a moment then reload
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2500);
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    alert("Error triggering ingestion: " + err);
+                    overlay.classList.remove('active');
+                });
+        }
+    </script>
+</body>
+
+</html>
